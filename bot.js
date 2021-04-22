@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import twit from 'twit'
 import { VERIFY_TRUE, VERIFY_FALSE, VERIFY } from './constants.js'
 
+// console.log('process.env', process.env)
 // Create a single supabase client for interacting with your database
 const supabase = createClient(
     'https://xvtrvphgtmtrarhiicqb.supabase.co',
@@ -18,7 +19,7 @@ const config = {
 }
 
 const T = new twit(config)
-var stream = T.stream('statuses/filter', { track: ['@covidresource_v'] })
+var stream = T.stream('statuses/filter', { track: ['@covid_src'] })
 stream.on('tweet', tweetEvent)
 
 function checkTweetMsgQuery(txt = '') {
@@ -181,7 +182,7 @@ async function tweetEvent(tweet) {
 function sendTweetResponseForVotes(tweet, data) {
     let name = tweet.user.screen_name
     let nameID = tweet.id_str
-
+    let diff = data[0].votes_true - data[0].votes_false
     // Start a reply back to the sender
     let reply =
         '@' +
@@ -189,8 +190,10 @@ function sendTweetResponseForVotes(tweet, data) {
         '  ' +
         'Votes for this verified resource - YES:' +
         data[0].votes_true +
-        ' , NO:' +
-        data[0].votes_false
+        '  NO:' +
+        data[0].votes_false +
+        ' \nTotal verification score: ' +
+        diff
     let params = {
         status: reply,
         in_reply_to_status_id: nameID,
@@ -214,7 +217,7 @@ function sendTweetResponseForNewRecord(tweet) {
         '@' +
         name +
         '  ' +
-        'No verified votes yet for this resoucre tweet. You can vote now with "verify true" or "verify false" '
+        'No votes yet. You can vote now by replying in parent tweet with "verify true" or "verify false" '
     let params = {
         status: reply,
         in_reply_to_status_id: nameID,
