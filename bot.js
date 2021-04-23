@@ -95,7 +95,7 @@ async function tweetEvent(tweet) {
             } else {
                 console.log('VERIFY FALSE VOTE ERROR', error)
             }
-        } else {
+        } else if (verify === VERIFY) {
             sendTweetResponseForVotes(tweet, tweetinfoRecord)
         }
     } else {
@@ -110,7 +110,7 @@ async function tweetEvent(tweet) {
                 verify = true
                 break
             case VERIFY:
-                verify = VERIFY
+                verify = true
                 break
             default:
                 break
@@ -130,7 +130,7 @@ async function tweetEvent(tweet) {
         ])
 
         // send response based on condition
-        if (data) {
+        if (data && verify !== null) {
             // console.log('INSERTED NEW TWEET RECORD INTO DB')
             sendTweetResponseForNewRecord(tweet)
         } else {
@@ -187,7 +187,7 @@ function sendTweetResponseForNewRecord(tweet) {
         in_reply_to_status_id: nameID,
     }
 
-    if (tweet.text.length < 25) {
+    if (tweet.text.length < 50) {
         T.post('statuses/update', params, function (err, data, response) {
             if (err !== undefined) {
                 console.log('tweet reply error: ', err)
