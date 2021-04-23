@@ -32,13 +32,17 @@ function checkTweetMsgQuery(txt = '') {
     } else if (txt.includes('verify')) {
         return VERIFY
     }
-    return 'NONE'
+    return null
 }
 
 async function tweetEvent(tweet) {
     console.log('tweet', tweet.in_reply_to_status_id_str)
     //   const tweetId = tweet.id
     const parentTweetId = tweet.in_reply_to_status_id_str
+    const displayText = tweet.text
+        .slice(tweet.display_text_range[0], tweet.display_text_range[1])
+        .toLowerCase()
+
     let { data: tweetinfoRecord, error } = await supabase
         .from('tweetinfo')
         .select('*')
@@ -46,81 +50,24 @@ async function tweetEvent(tweet) {
 
     if (tweetinfoRecord.length > 0) {
         console.log('tweetinfoRecord', tweetinfoRecord)
-        let verify = null
-
         // checks which query user has submitted
-        const executeCmd = checkTweetMsgQuery(tweet.text)
-        switch (executeCmd) {
-            case VERIFY_FALSE:
-                verify = false
-                break
-            case VERIFY_TRUE:
-                verify = true
-                break
-            case VERIFY:
-
-            default:
-                break
-        }
-
-        if (verify === true) {
-            // REGISTER VOTE FOR TRUE VERIFICATION
-            const { data, error } = await supabase
-                .from('tweetinfo')
-                .update({
-                    votes_true: parseInt(
-                        parseInt(tweetinfoRecord[0].votes_true) + parseInt(1)
-                    ),
-                })
-                .eq('parent_tweet_id', parentTweetId)
-            if (data) {
-                // console.log('VERIFY VOTE TO TRUE COUNT', data)
-                sendTweetResponseForVotes(tweet, data)
-            } else {
-                console.log('VERIFY TRUE VOTE ERROR', error)
-            }
-        } else if (verify === false) {
-            // REGISTER VOTE FOR FALSE VERIFICATION
-            const { data, error } = await supabase
-                .from('tweetinfo')
-                .update({
-                    votes_false: parseInt(
-                        parseInt(tweetinfoRecord[0].votes_false) + parseInt(1)
-                    ),
-                })
-                .eq('parent_tweet_id', parentTweetId)
-            if (data) {
-                // console.log('VERIFY VOTE TO FALSE COUNT')
-                sendTweetResponseForVotes(tweet, data)
-            } else {
-                console.log('VERIFY FALSE VOTE ERROR', error)
-            }
-        } else if (verify === VERIFY) {
+        const cmd = checkTweetMsgQuery(displayText)
+        if (cmd === VERIFY_TRUE) {
+            verifyTrue(tweetinfoRecord, parentTweetId, tweet)
+        } else if (cmd === VERIFY_FALSE) {
+            verifyFalse(tweetinfoRecord, parentTweetId, tweet)
+        } else if (cmd === VERIFY) {
             sendTweetResponseForVotes(tweet, tweetinfoRecord)
         }
     } else {
         /* INSERTS new record with new data*/
-        let verify = null
-        const executeCmd = checkTweetMsgQuery(tweet.text)
-        switch (executeCmd) {
-            case VERIFY_FALSE:
-                verify = false
-                break
-            case VERIFY_TRUE:
-                verify = true
-                break
-            case VERIFY:
-                verify = true
-                break
-            default:
-                break
-        }
+        const cmd = checkTweetMsgQuery(displayText)
         const { data, error } = await supabase.from('tweetinfo').insert([
             {
                 tweet_id: tweet.id_str,
                 parent_tweet_id: tweet.in_reply_to_status_id_str,
-                votes_true: verify === true ? 1 : 0,
-                votes_false: verify === false ? 1 : 0,
+                votes_true: cmd === VERIFY_TRUE ? 1 : 0,
+                votes_false: cmd === VERIFY_FALSE ? 1 : 0,
                 users: {
                     id: tweet.user.id,
                     name: tweet.user.name,
@@ -129,8 +76,9 @@ async function tweetEvent(tweet) {
             },
         ])
 
+        console.log('data', data, cmd)
         // send response based on condition
-        if (data && verify !== null) {
+        if (data && cmd !== null) {
             // console.log('INSERTED NEW TWEET RECORD INTO DB')
             sendTweetResponseForNewRecord(tweet)
         } else {
@@ -139,6 +87,42 @@ async function tweetEvent(tweet) {
                 error
             )
         }
+    }
+}
+
+async function verifyTrue(tweetinfoRecord, parentTweetId, tweet) {
+    // REGISTER VOTE FOR TRUE VERIFICATION
+    const { data, error } = await supabase
+        .from('tweetinfo')
+        .update({
+            votes_true: parseInt(
+                parseInt(tweetinfoRecord[0].votes_true) + parseInt(1)
+            ),
+        })
+        .eq('parent_tweet_id', parentTweetId)
+    if (data) {
+        // console.log('VERIFY VOTE TO TRUE COUNT', data)
+        sendTweetResponseForVotes(tweet, data)
+    } else {
+        console.log('VERIFY TRUE VOTE ERROR', error)
+    }
+}
+
+async function verifyFalse(tweetinfoRecord, parentTweetId, tweet) {
+    // REGISTER VOTE FOR FALSE VERIFICATION
+    const { data, error } = await supabase
+        .from('tweetinfo')
+        .update({
+            votes_false: parseInt(
+                parseInt(tweetinfoRecord[0].votes_false) + parseInt(1)
+            ),
+        })
+        .eq('parent_tweet_id', parentTweetId)
+    if (data) {
+        // console.log('VERIFY VOTE TO FALSE COUNT')
+        sendTweetResponseForVotes(tweet, data)
+    } else {
+        console.log('VERIFY FALSE VOTE ERROR', error)
     }
 }
 
@@ -172,10 +156,13 @@ function sendTweetResponseForVotes(tweet, data) {
 }
 
 function sendTweetResponseForNewRecord(tweet) {
-    let name = tweet.user.screen_name
-    let nameID = tweet.id_str
+    const name = tweet.user.screen_name
+    const nameID = tweet.id_str
+    const displayText = tweet.text.slice(
+        tweet.display_text_range[0],
+        tweet.display_text_range[1]
+    )
 
-    console.log('tweet.text.length', tweet.text.length, tweet.text)
     // Start a reply back to the sender
     let reply =
         '@' +
@@ -187,7 +174,7 @@ function sendTweetResponseForNewRecord(tweet) {
         in_reply_to_status_id: nameID,
     }
 
-    if (tweet.text.length < 50) {
+    if (displayText.length < 25) {
         T.post('statuses/update', params, function (err, data, response) {
             if (err !== undefined) {
                 console.log('tweet reply error: ', err)
