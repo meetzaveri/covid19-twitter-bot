@@ -175,6 +175,7 @@ function sendTweetResponseForNewRecord(tweet) {
     let name = tweet.user.screen_name
     let nameID = tweet.id_str
 
+    console.log('tweet.text.length', tweet.text.length, tweet.text)
     // Start a reply back to the sender
     let reply =
         '@' +
