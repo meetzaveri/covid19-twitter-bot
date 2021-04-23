@@ -1,10 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
-// const createClient = require('@supabase/supabase-js');
-// import config from './config.js'
 import twit from 'twit'
 import { VERIFY_TRUE, VERIFY_FALSE, VERIFY } from './constants.js'
 
-// console.log('process.env', process.env)
 // Create a single supabase client for interacting with your database
 const supabase = createClient(
     'https://xvtrvphgtmtrarhiicqb.supabase.co',
@@ -67,6 +64,7 @@ async function tweetEvent(tweet) {
         }
 
         if (verify === true) {
+            // REGISTER VOTE FOR TRUE VERIFICATION
             const { data, error } = await supabase
                 .from('tweetinfo')
                 .update({
@@ -76,12 +74,13 @@ async function tweetEvent(tweet) {
                 })
                 .eq('parent_tweet_id', parentTweetId)
             if (data) {
-                console.log('VERIFY VOTE TO TRUE COUNT', data)
+                // console.log('VERIFY VOTE TO TRUE COUNT', data)
                 sendTweetResponseForVotes(tweet, data)
             } else {
                 console.log('VERIFY TRUE VOTE ERROR', error)
             }
         } else if (verify === false) {
+            // REGISTER VOTE FOR FALSE VERIFICATION
             const { data, error } = await supabase
                 .from('tweetinfo')
                 .update({
@@ -91,7 +90,7 @@ async function tweetEvent(tweet) {
                 })
                 .eq('parent_tweet_id', parentTweetId)
             if (data) {
-                console.log('VERIFY VOTE TO FALSE COUNT')
+                // console.log('VERIFY VOTE TO FALSE COUNT')
                 sendTweetResponseForVotes(tweet, data)
             } else {
                 console.log('VERIFY FALSE VOTE ERROR', error)
@@ -129,8 +128,10 @@ async function tweetEvent(tweet) {
                 },
             },
         ])
+
+        // send response based on condition
         if (data) {
-            console.log('INSERTED NEW TWEET RECORD INTO DB')
+            // console.log('INSERTED NEW TWEET RECORD INTO DB')
             sendTweetResponseForNewRecord(tweet)
         } else {
             console.log(
@@ -139,47 +140,6 @@ async function tweetEvent(tweet) {
             )
         }
     }
-
-    //   const userId = tweet.user.id;
-    //   const { data, error } = await supabase.from('tweetinfo').insert([
-    //     {
-    //       tweet_id: tweet.id_str,
-    //	   parent_tweet_id: tweet.in_reply_to_status_id_str
-    //       votes_true: 1,
-    //       votes_false: 0,
-    //       users: {
-    //         id: tweet.user.id,
-    //         name: tweet.user.name,
-    //         screen_name: tweet.user.screen_name,
-    //       },
-    //     },
-    //   ]);
-
-    //   if (data) {
-    //     let name = tweet.user.screen_name;
-    //     let nameID = tweet.id_str;
-
-    //     // Start a reply back to the sender
-    //     let reply =
-    //       'You mentioned me! @' +
-    //       name +
-    //       ' ' +
-    //       'Checking verification of covid resources';
-    //     let params = {
-    //       status: reply,
-    //       in_reply_to_status_id: nameID,
-    //     };
-
-    //     // T.post('statuses/update', params, function (err, data, response) {
-    //     //   if (err !== undefined) {
-    //     //     console.log(err);
-    //     //   } else {
-    //     //     console.log('Tweeted: ' + params.status);
-    //     //   }
-    //     // });
-    //   } else if (error) {
-    //     console.log('supabase insert error', error);
-    //   }
 }
 
 function sendTweetResponseForVotes(tweet, data) {
@@ -236,8 +196,3 @@ function sendTweetResponseForNewRecord(tweet) {
         })
     }
 }
-
-// Run every 60 seconds
-// setInterval(function () {
-//   retweet('#DataScience OR #DataVisualization');
-// }, 60000);
