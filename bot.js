@@ -110,6 +110,9 @@ async function tweetEvent(tweet) {
             case VERIFY_TRUE:
                 verify = true
                 break
+            case VERIFY:
+                verify = VERIFY
+                break
             default:
                 break
         }
@@ -128,7 +131,7 @@ async function tweetEvent(tweet) {
         ])
         if (data) {
             console.log('INSERTED NEW TWEET RECORD INTO DB')
-            sendTweetResponseForNewRecord(tweet)
+            verify !== null && sendTweetResponseForNewRecord(tweet)
         } else {
             console.log(
                 'Something went wrong: supabase insert operation',
@@ -188,11 +191,11 @@ function sendTweetResponseForVotes(tweet, data) {
         '@' +
         name +
         '  ' +
-        'Votes for this verified resource - YES:' +
+        'Votes for this verified resource - YES: ' +
         data[0].votes_true +
-        '  NO:' +
+        '  NO: ' +
         data[0].votes_false +
-        ' \nTotal verification score: ' +
+        ' \nOverall Verification result: ' +
         diff
     let params = {
         status: reply,
@@ -223,13 +226,15 @@ function sendTweetResponseForNewRecord(tweet) {
         in_reply_to_status_id: nameID,
     }
 
-    T.post('statuses/update', params, function (err, data, response) {
-        if (err !== undefined) {
-            console.log('tweet reply error: ', err)
-        } else {
-            console.log('Tweeted: ' + params.status)
-        }
-    })
+    if (tweet.text.length < 25) {
+        T.post('statuses/update', params, function (err, data, response) {
+            if (err !== undefined) {
+                console.log('tweet reply error: ', err)
+            } else {
+                console.log('Tweeted: ' + params.status)
+            }
+        })
+    }
 }
 
 // Run every 60 seconds
