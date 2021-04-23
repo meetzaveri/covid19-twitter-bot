@@ -131,7 +131,7 @@ async function tweetEvent(tweet) {
         ])
         if (data) {
             console.log('INSERTED NEW TWEET RECORD INTO DB')
-            verify !== null && sendTweetResponseForNewRecord(tweet)
+            sendTweetResponseForNewRecord(tweet)
         } else {
             console.log(
                 'Something went wrong: supabase insert operation',
